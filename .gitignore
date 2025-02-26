@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+myenv/
+env/
+*.env
+*.venv
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Python package files
+*.egg-info/
+dist/
+build/
+
+# VS Code settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Cache files
+.cache/
+pip-log.txt
+
+# Ignore data files (optional)
+*.csv
+*.json
+*.xlsx
+
+# Ignore models (optional)
+models/
+*.h5
+*.pkl
+
+# Ignore compiled C extensions
+*.so
+
+# Ignore Plotly configuration
+~/.plotly/

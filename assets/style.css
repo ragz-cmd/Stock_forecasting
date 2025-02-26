@@ -1,0 +1,106 @@
+/* Global styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Roboto", sans-serif;
+}
+
+/* Parent container for the entire app */
+.container {
+  display: flex;
+  min-height: 100vh; /* Full viewport height */
+}
+
+/* Navigation section: the left column with inputs and buttons */
+.nav {
+  width: 25vw; /* 25% of the viewport width */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: rgb(5, 107, 107);
+  padding: 20px;
+  color: #fff;
+}
+
+/* Header text in the navigation area */
+.start {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+/* Individual input divisions inside the nav */
+.input-stock,
+.input-date,
+.input-actions {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* Input field styling */
+.input-field,
+.input-number {
+  width: 80%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Button styling */
+.btn {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  border-radius: 4px;
+  background-color: #4caf50;
+  color: white;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background-color: #45a049;
+}
+
+/* Content section: the right column for plots and company info */
+.content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+/* Header in the content area for company logo and name */
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header img {
+  height: 50px;
+  margin-right: 15px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  color: #333;
+}
+
+/* Company description styling */
+.description_ticker {
+  font-size: 1.1rem;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+/* Styling for graph containers */
+#graphs-content,
+#main-content,
+#forecast-content {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
