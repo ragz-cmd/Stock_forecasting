@@ -11,9 +11,20 @@ import plotly.express as px
 app = dash.Dash(__name__)
 server = app.server
 
+# Updated flatten_columns function to convert multi-index columns to single-level strings
+def flatten_columns(df):
+    if isinstance(df.columns, pd.MultiIndex):
+        new_columns = []
+        for col in df.columns:
+            # If second element is empty, use only the first element;
+            # otherwise, use the first element (since we assume one ticker)
+            new_columns.append(col[0])
+        df.columns = new_columns
+    return df
+
 # Build the application layout
 app.layout = html.Div([
-    # Parent container: wraps the navigation and content sections
+    # Parent container: wraps navigation and content sections
     html.Div([
         # Navigation section: inputs and buttons
         html.Div(
@@ -21,7 +32,6 @@ app.layout = html.Div([
                 html.P("Welcome to the Stock Dash App!", className="start"),
                 html.Div(
                     [
-                        # Stock code input
                         dcc.Input(
                             id="stock-code",
                             type="text",
@@ -33,7 +43,6 @@ app.layout = html.Div([
                 ),
                 html.Div(
                     [
-                        # Date range picker input
                         dcc.DatePickerRange(
                             id="date-range",
                             start_date=dt(2020, 1, 1),
@@ -45,7 +54,6 @@ app.layout = html.Div([
                 ),
                 html.Div(
                     [
-                        # Buttons and forecast input (forecast functionality to be implemented later)
                         html.Button("Stock Price", id="stock-price-btn", className="btn"),
                         html.Button("Indicators", id="indicators-btn", className="btn"),
                         dcc.Input(
@@ -66,19 +74,14 @@ app.layout = html.Div([
             [
                 html.Div(
                     [
-                        # Company logo and name; defaults to a placeholder image
-                        html.Img(src="assets/default_logo.png", id="company-logo", style={"height": "50px"}),
+                        html.Img(src="/assets/default_logo.png", id="company-logo", style={"height": "50px"}),
                         html.H1("Company Name", id="company-name")
                     ],
                     className="header"
                 ),
-                # Company description to be updated via callback
                 html.Div(id="description", className="description_ticker"),
-                # Div for stock price graph
                 html.Div(id="graphs-content"),
-                # Div for indicator graph (EMA)
                 html.Div(id="main-content"),
-                # Div for forecast graph (to be implemented later)
                 html.Div(id="forecast-content")
             ],
             className="content"
@@ -86,13 +89,7 @@ app.layout = html.Div([
     ], className="container")
 ])
 
-# Helper function: Flatten multi-index columns, if present
-def flatten_columns(df):
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [col[0] for col in df.columns.values]
-    return df
-
-# Callback 1: Update company information (description, logo, company name)
+# Callback 1: Update company information
 @app.callback(
     [Output("description", "children"),
      Output("company-logo", "src"),
@@ -108,15 +105,19 @@ def update_company_info(n_clicks, stock_code):
         ticker = yf.Ticker(stock_code)
         info = ticker.info
     except Exception as e:
-        return f"Error fetching info: {e}", "assets/default_logo.png", "Unknown Company"
+        return f"Error fetching info: {e}", "/assets/default_logo.png", "Unknown Company"
 
     description = info.get("longBusinessSummary", "No description available.")
     logo = info.get("logo_url", "")
-    default_logo = "assets/default_logo.png"
-    # Use default logo if logo URL is missing or invalid
     if not logo or not logo.startswith("http"):
-        logo = default_logo
+        website = info.get("website", "")
+        if website:
+            domain = website.replace("https://", "").replace("http://", "").split("/")[0]
+            logo = f"https://logo.clearbit.com/{domain}"
+        else:
+            logo = "/assets/default_logo.png"
     name = info.get("shortName", "Unknown Company")
+    print("Logo URL:", logo)  # Debug print
     return description, logo, name
 
 # Callback 2: Update stock price graph
@@ -134,20 +135,19 @@ def update_stock_price(n_clicks, stock_code, start_date, end_date):
     try:
         start_date_str = pd.to_datetime(start_date).strftime("%Y-%m-%d")
         end_date_str = pd.to_datetime(end_date).strftime("%Y-%m-%d")
-        # Set auto_adjust explicitly to False for consistency
         df = yf.download(stock_code, start=start_date_str, end=end_date_str, auto_adjust=False)
     except Exception as e:
         return html.Div(f"Error downloading stock data: {e}")
 
     if df.empty:
         return html.Div("No data available for this stock and date range.")
-
+    
     df.reset_index(inplace=True)
     df = flatten_columns(df)
-    fig = get_stock_price_fig(df)
+    fig = px.line(df, x="Date", y=["Open", "Close"], title="Opening and Closing Price vs Date")
     return dcc.Graph(figure=fig)
 
-# Callback 3: Update indicator graph (Exponential Moving Average)
+# Callback 3: Update indicator graph (EMA)
 @app.callback(
     Output("main-content", "children"),
     [Input("indicators-btn", "n_clicks")],
@@ -168,29 +168,33 @@ def update_indicator(n_clicks, stock_code, start_date, end_date):
 
     if df.empty:
         return html.Div("No data available for this stock and date range.")
-
+    
     df.reset_index(inplace=True)
     df = flatten_columns(df)
-    fig = get_indicator_fig(df)
+    df['EWA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
+    fig = px.line(df, x="Date", y="EWA_20", title="Exponential Moving Average vs Date")
     return dcc.Graph(figure=fig)
 
-# Helper function: Generate stock price graph using Plotly Express
-def get_stock_price_fig(df):
-    # Create a line chart of Open and Close prices versus Date
-    fig = px.line(df,
-                  x="Date",
-                  y=["Open", "Close"],
-                  title="Opening and Closing Price vs Date")
-    return fig
-
-# Helper function: Generate indicator graph (20-day Exponential Moving Average)
-def get_indicator_fig(df):
-    df['EWA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
-    fig = px.line(df,
-                  x="Date",
-                  y="EWA_20",
-                  title="Exponential Moving Average vs Date")
-    return fig
+# Callback 4: Forecast using the SVR model (imported from model.py)
+@app.callback(
+    Output("forecast-content", "children"),
+    [Input("forecast-btn", "n_clicks")],
+    [State("stock-code", "value"),
+     State("forecast-days", "value")]
+)
+def forecast_stock(n_clicks, stock_code, forecast_days):
+    if not n_clicks or not stock_code or not forecast_days:
+        raise PreventUpdate
+    try:
+        from model import train_svr_model, create_forecast
+        model, mse, mae, df = train_svr_model(stock_code)
+    except Exception as e:
+        return html.Div(f"Error training model: {e}")
+    
+    forecast_df = create_forecast(model, df, int(forecast_days))
+    fig = px.line(forecast_df, x="Date", y="Predicted", title="Forecasted Stock Prices")
+    metrics_text = f"Model Performance - MSE: {mse:.2f}, MAE: {mae:.2f}"
+    return html.Div([html.P(metrics_text), dcc.Graph(figure=fig)])
 
 if __name__ == '__main__':
     app.run_server(debug=True)
